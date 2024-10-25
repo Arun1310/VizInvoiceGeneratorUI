@@ -11,12 +11,22 @@ i18next.addResourceBundle('ar', 'navigation', ar);
  */
 const navigationConfig = [
 	{
-		id: 'example-component',
-		title: 'Example',
-		translate: 'EXAMPLE',
+		id: 'home-component',
+		title: 'Home',
+		translate: 'HOME',
 		type: 'item',
-		icon: 'heroicons-outline:star',
-		url: 'example'
-	}
+		icon: 'heroicons-outline:home',
+		url: 'home',
+		end: true
+	},
+	// {
+	// 	id: 'invoice-component',
+	// 	title: 'Invoice',
+	// 	translate: 'Invoice',
+	// 	type: 'item',
+	// 	icon: 'heroicons-outline:home',
+	// 	url: 'invoice',
+	// 	end: true
+	// }
 ];
 export default navigationConfig;

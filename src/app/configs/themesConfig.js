@@ -32,16 +32,28 @@ export const themesConfig = {
 				black: '#000000',
 				white: '#FFFFFF'
 			},
+			// primary: {
+			// 	light: '#536D89',
+			// 	main: '#0A74DA',
+			// 	dark: '#00418A',
+			// 	contrastText: '#FFFFFF'
+			// },
+			// secondary: {
+			// 	light: '#6BC9F7',
+			// 	main: '#00A4EF',
+			// 	dark: '#0078D7',
+			// 	contrastText: '#FFFFFF'
+			// },
 			primary: {
-				light: '#536D89',
-				main: '#0A74DA',
-				dark: '#00418A',
-				contrastText: '#FFFFFF'
-			},
-			secondary: {
 				light: '#6BC9F7',
 				main: '#00A4EF',
 				dark: '#0078D7',
+				contrastText: '#FFFFFF'
+			},
+			secondary: {
+				light: '#ffe066',
+				main: '#f9c555',
+				dark: '#cca300',
 				contrastText: '#FFFFFF'
 			},
 			background: {

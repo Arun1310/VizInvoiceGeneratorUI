@@ -64,9 +64,9 @@ function Layout3(props) {
 						/>
 					)}
 
-					<div className="sticky top-0 z-99">
+					{/* <div className="sticky top-0 z-99">
 						<Configurator />
-					</div>
+					</div> */}
 
 					<div className="relative z-10 flex min-h-0 flex-auto flex-col">
 						<FuseSuspense>

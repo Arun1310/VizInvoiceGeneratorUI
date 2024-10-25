@@ -23,7 +23,7 @@ const routes = [
 		children: [
 			{
 				path: '/',
-				element: <Navigate to="/example" />
+				element: <Navigate to="/home" />
 			},
 			...mainRoutes,
 			{

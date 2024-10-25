@@ -103,11 +103,16 @@ function JwtAuthProvider(props) {
 			if (isTokenValid(accessToken)) {
 				try {
 					setIsLoading(true);
-					const response = await axios.get(config.getUserUrl, {
+					const tokenDto = {
+						accessToken
+					};
+					const response = await axios.post(config.getUserUrl, tokenDto, {
 						headers: { Authorization: `Bearer ${accessToken}` }
 					});
-					const userData = response?.data;
-					handleSignInSuccess(userData, accessToken);
+					// const userData = response?.data;
+					const userData = response?.data?.user;
+					const modifiedUserData = modifyUserDataResponse(userData);
+					handleSignInSuccess(modifiedUserData, accessToken);
 					return true;
 				} catch (error) {
 					const axiosError = error;
@@ -139,9 +144,10 @@ function JwtAuthProvider(props) {
 		try {
 			const response = await axios.post(url, data);
 			const userData = response?.data?.user;
-			const accessToken = response?.data?.access_token;
-			handleSuccess(userData, accessToken);
-			return userData;
+			const modifiedUserData = modifyUserDataResponse(userData);
+			const accessToken = response?.data?.accessToken;
+			handleSuccess(modifiedUserData, accessToken);
+			return modifiedUserData;
 		} catch (error) {
 			const axiosError = error;
 			handleFailure(axiosError);
@@ -177,6 +183,21 @@ function JwtAuthProvider(props) {
 			return axiosError;
 		}
 	}, []);
+
+	const modifyUserDataResponse = (userData) => {
+		const modifiedUserData = {
+			role: [userData.role],
+			from: 'jwt',
+			uid: userData.id,
+			data: {
+				id: userData.id,
+				displayName: userData.name,
+				email: userData.email,
+				role: userData.role
+			}
+		};
+		return modifiedUserData;
+	};
 	/**
 	 * Refresh access token
 	 */

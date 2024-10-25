@@ -11,7 +11,7 @@ const settingsConfig = {
 		/**
 		 * The style property defines the layout style for the application.
 		 */
-		style: 'layout1', // layout1 layout2 layout3
+		style: 'layout3', // layout1 layout2 layout3
 		/**
 		 * The config property defines the layout configuration for the application.
 		 * Check out default layout configs at app/theme-layouts for example app/theme-layouts/layout1/Layout1Config.js
@@ -35,7 +35,7 @@ const settingsConfig = {
 	 */
 	theme: {
 		main: themesConfig.default,
-		navbar: themesConfig.defaultDark,
+		navbar: themesConfig.default,
 		toolbar: themesConfig.default,
 		footer: themesConfig.defaultDark
 	},

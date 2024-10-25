@@ -1,9 +1,9 @@
 const jwtAuthConfig = {
 	tokenStorageKey: 'jwt_access_token',
-	signInUrl: 'mock-api/auth/sign-in',
-	signUpUrl: 'mock-api/auth/sign-up',
+	signInUrl: 'api/auth/sign-in',
+	signUpUrl: 'mock-api/Auth/sign-up',
 	tokenRefreshUrl: 'mock-api/auth/refresh',
-	getUserUrl: 'mock-api/auth/user',
+	getUserUrl: 'api/Token/refresh',
 	updateUserUrl: 'mock-api/auth/user',
 	updateTokenFromHeader: true
 };

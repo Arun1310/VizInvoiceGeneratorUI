@@ -1,7 +1,7 @@
 let APP_BASE_URL;
 
 if (process.env.NODE_ENV !== 'production') {
-	APP_BASE_URL = 'https://localhost:44311/';
+	APP_BASE_URL = 'https://localhost:44307/';
 } else {
 	// APP_BASE_URL = 'https://depotoncloudapi.azurewebsites.net/';
 }

@@ -5,7 +5,7 @@ const Layout3Config = {
 	title: 'Layout 3 - Horizontal',
 	defaults: {
 		mode: 'container',
-		containerWidth: 1120,
+		// containerWidth: 1120,
 		scroll: 'content',
 		navbar: {
 			display: true,
@@ -15,14 +15,14 @@ const Layout3Config = {
 		toolbar: {
 			display: true,
 			style: 'static',
-			position: 'below'
+			position: 'above'
 		},
 		footer: {
-			display: true,
+			display: false,
 			style: 'fixed'
 		},
 		leftSidePanel: {
-			display: true
+			display: false
 		},
 		rightSidePanel: {
 			display: true

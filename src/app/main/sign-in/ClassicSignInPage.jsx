@@ -9,7 +9,9 @@ import { Link } from 'react-router-dom';
 import _ from '@lodash';
 import Paper from '@mui/material/Paper';
 import FuseSvgIcon from '@fuse/core/FuseSvgIcon';
+import cipherService from 'src/app/auth/services/cipherService';
 import { zodResolver } from '@hookform/resolvers/zod';
+import useJwtAuth from 'src/app/auth/services/jwt/useJwtAuth';
 import { z } from 'zod';
 /**
  * Form Validation Schema
@@ -31,15 +33,31 @@ const defaultValues = {
  * The classic sign in page.
  */
 function ClassicSignInPage() {
-	const { control, formState, handleSubmit, reset } = useForm({
+	const { signIn } = useJwtAuth();
+
+	const { control, formState, handleSubmit, reset, setError } = useForm({
 		mode: 'onChange',
 		defaultValues,
 		resolver: zodResolver(schema)
 	});
 	const { isValid, dirtyFields, errors } = formState;
 
-	function onSubmit() {
-		reset(defaultValues);
+	function onSubmit(formData) {
+		const { email } = formData;
+		formData.password = cipherService.encrypt(formData.password);
+		const { password } = formData;
+		signIn({
+			email,
+			password
+		}).catch((error) => {
+			const errorData = error.response.data;
+			errorData.forEach((err) => {
+				setError(err.type, {
+					type: 'manual',
+					message: err.message
+				});
+			});
+		});
 	}
 
 	return (
