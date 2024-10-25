@@ -68,7 +68,7 @@ function CustomInvoiceGenerator({ invoiceData }, ref) {
 		if (invoiceData?.id) {
 			// Fetch PDF from the API
 			axios
-				.get(`https://localhost:44390/api/Invoice/GetCustomInvoice/${invoiceData.id}`, {
+				.get(`https://localhost:44307/api/Invoice/GetCustomInvoice/${invoiceData.id}`, {
 					responseType: 'blob' // Ensure response is a Blob
 				})
 				.then((response) => {
@@ -85,15 +85,11 @@ function CustomInvoiceGenerator({ invoiceData }, ref) {
 		const customFileName = `Custom_Invoice_${invoiceData.fileName}`;
 
 		formData.append('file', pdfBlob, customFileName);
-		const response = axios.post(
-			`https://localhost:44390/api/Invoice/UploadCustomInvoice/${invoiceData.id}`,
-			formData,
-			{
-				headers: {
-					'Content-Type': 'multipart/form-data'
-				}
+		axios.post(`https://localhost:44307/api/Invoice/UploadCustomInvoice/${invoiceData.id}`, formData, {
+			headers: {
+				'Content-Type': 'multipart/form-data'
 			}
-		);
+		});
 	};
 
 	useImperativeHandle(ref, () => ({
@@ -101,13 +97,11 @@ function CustomInvoiceGenerator({ invoiceData }, ref) {
 	}));
 
 	return (
-		<div className="grid grid-cols-12 gap-8 mt-12">
-			<div className="col-span-11">
-				<PdfHighlightViewer
-					pdfBlob={pdfBlob}
-					highlightFields={highlightFields}
-				/>
-			</div>
+		<div className="w-full mt-12 px-40">
+			<PdfHighlightViewer
+				pdfBlob={pdfBlob}
+				highlightFields={highlightFields}
+			/>
 		</div>
 	);
 }

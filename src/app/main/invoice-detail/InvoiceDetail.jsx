@@ -15,7 +15,7 @@ import Stepper from '@mui/material/Stepper';
 import ChevronLeftRoundedIcon from '@mui/icons-material/ChevronLeftRounded';
 import ChevronRightRoundedIcon from '@mui/icons-material/ChevronRightRounded';
 import AttributeMapping from '../components/AttributeMapping';
-// import CustomInvoiceGenerator from '../components/CustomInvoiceGenerator';
+import CustomInvoiceGenerator from '../components/CustomInvoiceGenerator';
 
 const Root = styled(FusePageSimple)(({ theme }) => ({
 	'& .FusePageSimple-header': {
@@ -35,13 +35,13 @@ function getStepContent(step, invoiceData, ref) {
 	switch (step) {
 		case 0:
 			return <AttributeMapping invoiceData={invoiceData} />;
-		// case 1:
-		// 	return (
-		// 		<CustomInvoiceGenerator
-		// 			invoiceData={invoiceData}
-		// 			ref={ref}
-		// 		/>
-		// 	);
+		case 1:
+			return (
+				<CustomInvoiceGenerator
+					invoiceData={invoiceData}
+					ref={ref}
+				/>
+			);
 		default:
 			throw new Error('Unknown step');
 	}
@@ -49,27 +49,21 @@ function getStepContent(step, invoiceData, ref) {
 
 function InvoiceDetail() {
 	const ref = useRef();
-	// eslint-disable-next-line no-unused-vars
-	const [mode, setMode] = useState('light');
-	// eslint-disable-next-line no-unused-vars
-	const [loading, setLoading] = useState(false);
 	const [invoiceData, setInvoiceData] = useState([]);
-	// eslint-disable-next-line no-unused-vars
-	const [showCustomTheme, setShowCustomTheme] = useState(true);
 	const [activeStep, setActiveStep] = useState(0);
 	const { id } = useParams();
 	const navigate = useNavigate();
 
 	const fetchInvoiceById = useCallback(async () => {
 		try {
-			setLoading(true);
+			// setLoading(true);
 			const response = await axios.get(`https://localhost:44307/api/Invoice/${id}`);
 			setInvoiceData(response.data);
-			setLoading(false);
+			// setLoading(false);
 		} catch (err) {
 			// setError("Error fetching invoices");
 		} finally {
-			setLoading(false);
+			// setLoading(false);
 		}
 	}, [id]);
 
@@ -189,19 +183,9 @@ function InvoiceDetail() {
 										<Button
 											startIcon={<ChevronLeftRoundedIcon />}
 											onClick={handleBack}
-											variant="text"
-											sx={{ display: { xs: 'none', sm: 'flex' } }}
-										>
-											Previous
-										</Button>
-									)}
-									{activeStep !== 0 && (
-										<Button
-											startIcon={<ChevronLeftRoundedIcon />}
-											onClick={handleBack}
 											variant="outlined"
-											fullWidth
-											sx={{ display: { xs: 'flex', sm: 'none' } }}
+											color="primary"
+											size="small"
 										>
 											Previous
 										</Button>
@@ -209,19 +193,21 @@ function InvoiceDetail() {
 									{activeStep === steps.length - 1 && (
 										<Button
 											variant="contained"
+											color="secondary"
 											endIcon={<ChevronRightRoundedIcon />}
 											onClick={onClickGenerate}
-											sx={{ width: { xs: '100%', sm: 'fit-content' } }}
+											size="small"
 										>
 											Generate
 										</Button>
 									)}
 									{activeStep !== steps.length - 1 && (
 										<Button
-											// variant="contained"
+											variant="contained"
+											color="secondary"
 											endIcon={<ChevronRightRoundedIcon />}
 											onClick={handleNext}
-											sx={{ width: { xs: '100%', sm: 'fit-content' } }}
+											size="small"
 										>
 											Next
 										</Button>
