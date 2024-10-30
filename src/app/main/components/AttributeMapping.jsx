@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Worker, Viewer } from '@react-pdf-viewer/core';
 import '@react-pdf-viewer/core/lib/styles/index.css';
 import '@react-pdf-viewer/highlight/lib/styles/index.css';
+import { Worker, Viewer } from '@react-pdf-viewer/core';
 import {
 	Table,
 	TableBody,
@@ -25,12 +25,33 @@ import { motion } from 'framer-motion';
 // import SaveIcon from '@mui/icons-material/Save';
 import { ExpandMore, ExpandLess, ListAlt } from '@mui/icons-material';
 import axios from 'axios';
-import { highlightPlugin } from '@react-pdf-viewer/highlight';
+import { highlightPlugin, Trigger } from '@react-pdf-viewer/highlight';
 
 function PdfHighlightViewer({ pdfUrl, highlightFields }) {
 	const [pdfFile, setPdfFile] = useState(null);
+	const renderHighlights = (props) => (
+		<div>
+			{highlightFields
+				.filter((area) => area.pageIndex === props.pageIndex)
+				.map((area, idx) => (
+					<div
+						key={idx}
+						className="highlight-area"
+						style={{
+							background: '#f9c555',
+							// background: 'green',
+							opacity: 0.4,
+							...props.getCssProperties(area, props.rotation)
+						}}
+					/>
+				))}
+		</div>
+	);
 
-	const highlightPluginInstance = highlightPlugin();
+	const highlightPluginInstance = highlightPlugin({
+		renderHighlights,
+		trigger: Trigger.None
+	});
 
 	useEffect(() => {
 		fetch(pdfUrl, { mode: 'cors' })
@@ -49,15 +70,6 @@ function PdfHighlightViewer({ pdfUrl, highlightFields }) {
 				console.error('Error loading PDF:', err);
 			});
 	}, [pdfUrl]);
-
-	const renderHighlights = (pageIndex) => {
-		const highlights = highlightFields[pageIndex] || [];
-		return highlights.map((highlight, index) => ({
-			id: `highlight-${pageIndex}-${index}`,
-			position: highlight.position,
-			content: <div style={{ backgroundColor: 'rgba(255, 255, 0, 0.5)' }}>{highlight.text}</div>
-		}));
-	};
 
 	return (
 		<div
@@ -84,32 +96,43 @@ function AttributeMapping(props) {
 	const [openDialog, setOpenDialog] = useState(false);
 	const [currentArray, setCurrentArray] = useState([]);
 	const [expandedRows, setExpandedRows] = useState([]);
-	const [editableData, setEditableData] = useState({});
+	const [editableData, setEditableData] = useState([]);
 	// const [editableData, setEditableData] = useState(invoiceData?.invoiceResult);
-	const highlightFields = {
-		0: [
-			{
-				position: { left: 20, top: 200, width: 200, height: 30 },
-				text: 'Invoice'
-			},
-			{
-				position: { left: 50, top: 300, width: 250, height: 30 },
-				text: 'Email Field'
-			}
-		],
-		1: [
-			{
-				position: { left: 100, top: 150, width: 150, height: 30 },
-				text: 'Address Field'
-			}
-		]
-	};
+	const [highlightFields, setHighlightFields] = useState([]);
 
 	const pdfUrl = invoiceData?.fileUrl;
 
+	const extractPositions = (attributes) => {
+		const positions = [];
+
+		attributes.forEach((attr) => {
+			// Add positions from the current attribute
+			if (attr.position) {
+				attr.position.forEach((pos) => {
+					positions.push({
+						pageIndex: pos.pageIndex,
+						height: pos.height,
+						width: pos.width,
+						left: pos.left,
+						top: pos.top
+					});
+				});
+			}
+
+			// Recursively process children, if any
+			if (attr.children && attr.children.length > 0) {
+				positions.push(...extractPositions(attr.children));
+			}
+		});
+
+		return positions;
+	};
+
 	useEffect(() => {
-		if (invoiceData?.invoiceResult) {
-			setEditableData(invoiceData.invoiceResult);
+		if (invoiceData?.attributes) {
+			setEditableData(invoiceData?.attributes);
+			const parsedHighlights = extractPositions(invoiceData.attributes);
+			setHighlightFields(parsedHighlights);
 		}
 	}, [invoiceData]);
 
@@ -179,21 +202,21 @@ function AttributeMapping(props) {
 		};
 		// const allowedFields = ['vendorName', 'customerName', 'subTotal', 'totalTax', 'invoiceTotal'];
 		const allowedFields = [
-			'vendorName',
-			'vendorTaxId',
-			'vendorAddress',
-			'invoiceId',
-			'invoiceDate',
-			'purchaseOrder',
-			'purchaseOrderDate',
-			'shippingAddressRecipient',
-			'shippingAddress',
-			'customerAddressRecipient',
-			'customerAddress',
-			'vendorAddressRecipient',
-			'invoiceTotal',
-			'invoiceTotalInWords',
-			'customerTaxId'
+			'VendorName',
+			'VendorTaxId',
+			'VendorAddress',
+			'InvoiceId',
+			'InvoiceDate',
+			'PurchaseOrder',
+			'PurchaseOrderDate',
+			'ShippingAddressRecipient',
+			'ShippingAddress',
+			'CustomerAddressRecipient',
+			'CustomerAddress',
+			'VendorAddressRecipient',
+			'InvoiceTotal',
+			'InvoiceTotalInWords',
+			'CustomerTaxId'
 		];
 		const allowedItemFields = ['description', 'productCode', 'quantity', 'unit', 'unitPrice', 'amount'];
 
@@ -269,52 +292,60 @@ function AttributeMapping(props) {
 						</TableHead>
 						<TableBody>
 							{data &&
-								allowedFields?.map((key) => {
-									if (data[key] !== undefined) {
+								data.length > 0 &&
+								data.map((item, index) => {
+									// Destructure the necessary properties from the item
+									const { attributeName, attributeValue } = item;
+
+									// Check if the attributeName is in allowedFields
+									if (allowedFields?.includes(attributeName)) {
 										return (
-											<TableRow key={key}>
+											<TableRow key={index}>
+												{' '}
+												{/* Use index as key here or a unique identifier if available */}
 												<TableCell className={commonBorderClass}>
 													<Checkbox
 														color="success"
 														icon={<CheckCircleOutlineIcon />}
 														checkedIcon={<CheckCircleIcon />}
-														onChange={(e) => handleRowCheckboxChange(e, key)}
-														inputProps={{ 'aria-label': data[key] }}
+														onChange={(e) => handleRowCheckboxChange(e, attributeName)}
+														inputProps={{ 'aria-label': attributeValue }}
 													/>
-													{/* <Checkbox
-														// checked={data[key].isChecked}
-														color="success"
-														onChange={(e) => handleRowCheckboxChange(e, key)}
-														inputProps={{ 'aria-label': data[key] }}
-													/> */}
 												</TableCell>
-												<TableCell className={commonBorderClass}>{key}</TableCell>
+												<TableCell className={commonBorderClass}>{attributeName}</TableCell>
 												<TableCell className={commonBorderClass}>
 													<TextField
 														fullWidth
 														variant="outlined"
-														value={data[key] ?? ''}
-														onChange={(e) => handleInputChange(e, key)}
+														value={attributeValue ?? ''} // Use attributeValue directly
+														onChange={(e) => handleInputChange(e, attributeName)}
 													/>
 												</TableCell>
 											</TableRow>
 										);
 									}
 
-									return null;
-								})}
-
-							{data &&
-								Object.keys(data).map((key) => {
-									if (Array.isArray(data[key]) && data[key].length > 0) {
+									// Check if the data item has children and render accordingly
+									if (Array.isArray(item.children) && item.children.length > 0) {
 										return (
-											<TableRow key={key}>
-												<TableCell className={commonBorderClass}>{key}</TableCell>
+											<TableRow key={index}>
+												{' '}
+												<TableCell className={commonBorderClass}>
+													{/* <Checkbox
+														color="success"
+														icon={<CheckCircleOutlineIcon />}
+														checkedIcon={<CheckCircleIcon />}
+														onChange={(e) => handleRowCheckboxChange(e, attributeName)}
+														inputProps={{ 'aria-label': attributeValue }}
+													/> */}
+												</TableCell>
+												{/* Use index as key here or a unique identifier if available */}
+												<TableCell className={commonBorderClass}>{attributeName}</TableCell>
 												<TableCell className={commonBorderClass}>
 													<IconButton
 														sx={{ '& .MuiSvgIcon-root': { fontSize: 30 } }}
 														color="secondary"
-														onClick={() => handleOpenDialog(data[key])}
+														onClick={() => handleOpenDialog(item.children)}
 													>
 														<ListAlt />
 													</IconButton>
@@ -323,7 +354,7 @@ function AttributeMapping(props) {
 										);
 									}
 
-									return null;
+									return null; // Return null for keys that don't match any criteria
 								})}
 						</TableBody>
 					</Table>
