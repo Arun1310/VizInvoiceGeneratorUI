@@ -38,8 +38,7 @@ function PdfHighlightViewer({ pdfUrl, highlightFields }) {
 						key={idx}
 						className="highlight-area"
 						style={{
-							background: '#f9c555',
-							// background: 'green',
+							background: area.isAttributeMapped === true ? 'green' : '#f9c555',
 							opacity: 0.4,
 							...props.getCssProperties(area, props.rotation)
 						}}
@@ -97,7 +96,6 @@ function AttributeMapping(props) {
 	const [currentArray, setCurrentArray] = useState([]);
 	const [expandedRows, setExpandedRows] = useState([]);
 	const [editableData, setEditableData] = useState([]);
-	// const [editableData, setEditableData] = useState(invoiceData?.invoiceResult);
 	const [highlightFields, setHighlightFields] = useState([]);
 
 	const pdfUrl = invoiceData?.fileUrl;
@@ -114,12 +112,12 @@ function AttributeMapping(props) {
 						height: pos.height,
 						width: pos.width,
 						left: pos.left,
-						top: pos.top
+						top: pos.top,
+						isAttributeMapped: attr.isAttributeMapped
 					});
 				});
 			}
 
-			// Recursively process children, if any
 			if (attr.children && attr.children.length > 0) {
 				positions.push(...extractPositions(attr.children));
 			}
@@ -136,12 +134,11 @@ function AttributeMapping(props) {
 		}
 	}, [invoiceData]);
 
-	const handleInputChange = (e, key) => {
+	const handleInputChange = (e, index) => {
 		const { value } = e.target;
-		setEditableData((prevState) => ({
-			...prevState,
-			[key]: value
-		}));
+		const newData = [...editableData];
+		newData[index].attributeValue = value;
+		setEditableData(newData);
 	};
 
 	const handleItemChange = (e, index, field) => {
@@ -180,16 +177,23 @@ function AttributeMapping(props) {
 
 	const handleRowCheckboxChange = (index) => {
 		const newData = [...editableData];
-		newData[index].isChecked = !newData[index].isChecked;
+		newData[index].isAttributeMapped = !newData[index].isAttributeMapped;
 		setEditableData(newData);
 	};
+
+	useEffect(() => {
+		if (editableData && editableData.length > 0) {
+			const parsedHighlights = extractPositions(editableData);
+			setHighlightFields(parsedHighlights);
+		}
+	}, [editableData]);
 
 	// Handle header checkbox change
 	const handleSelectAll = (event) => {
 		const isChecked = event.target.checked;
 		const newData = editableData.map((item) => ({
 			...item,
-			isChecked
+			isAttributeMapped: isChecked
 		}));
 		setEditableData(newData);
 	};
@@ -218,7 +222,7 @@ function AttributeMapping(props) {
 			'InvoiceTotalInWords',
 			'CustomerTaxId'
 		];
-		const allowedItemFields = ['description', 'productCode', 'quantity', 'unit', 'unitPrice', 'amount'];
+		const allowedItemFields = ['Description', 'ProductCode', 'Quantity', 'Unit', 'UnitPrice', 'Amount'];
 
 		const handleOpenDialog = (arrayData) => {
 			setCurrentArray(arrayData);
@@ -305,10 +309,11 @@ function AttributeMapping(props) {
 												{/* Use index as key here or a unique identifier if available */}
 												<TableCell className={commonBorderClass}>
 													<Checkbox
+														checked={item.isAttributeMapped}
 														color="success"
 														icon={<CheckCircleOutlineIcon />}
 														checkedIcon={<CheckCircleIcon />}
-														onChange={(e) => handleRowCheckboxChange(e, attributeName)}
+														onChange={() => handleRowCheckboxChange(index)}
 														inputProps={{ 'aria-label': attributeValue }}
 													/>
 												</TableCell>
@@ -318,7 +323,7 @@ function AttributeMapping(props) {
 														fullWidth
 														variant="outlined"
 														value={attributeValue ?? ''} // Use attributeValue directly
-														onChange={(e) => handleInputChange(e, attributeName)}
+														onChange={(e) => handleInputChange(e, index)}
 													/>
 												</TableCell>
 											</TableRow>
@@ -331,13 +336,13 @@ function AttributeMapping(props) {
 											<TableRow key={index}>
 												{' '}
 												<TableCell className={commonBorderClass}>
-													{/* <Checkbox
+													<Checkbox
 														color="success"
 														icon={<CheckCircleOutlineIcon />}
 														checkedIcon={<CheckCircleIcon />}
 														onChange={(e) => handleRowCheckboxChange(e, attributeName)}
 														inputProps={{ 'aria-label': attributeValue }}
-													/> */}
+													/>
 												</TableCell>
 												{/* Use index as key here or a unique identifier if available */}
 												<TableCell className={commonBorderClass}>{attributeName}</TableCell>
@@ -388,6 +393,16 @@ function AttributeMapping(props) {
 						<Table aria-label="array data table">
 							<TableHead>
 								<TableRow>
+									{' '}
+									<TableCell className={commonBorderClass}>
+										{/* <Checkbox
+											color="success"
+											icon={<CheckCircleOutlineIcon />}
+											checkedIcon={<CheckCircleIcon />}
+											onChange={(e) => handleRowCheckboxChange(e, attributeName)}
+											inputProps={{ 'aria-label': attributeValue }}
+										/> */}
+									</TableCell>
 									<TableCell
 										className={commonBorderClass}
 										sx={tableHeaderStyle}
@@ -406,6 +421,16 @@ function AttributeMapping(props) {
 								{currentArray.map((item, index) => (
 									<React.Fragment key={index}>
 										<TableRow>
+											{' '}
+											<TableCell className={commonBorderClass}>
+												<Checkbox
+													color="success"
+													icon={<CheckCircleOutlineIcon />}
+													checkedIcon={<CheckCircleIcon />}
+													// onChange={(e) => handleRowCheckboxChange(e, attributeName)}
+													// inputProps={{ 'aria-label': attributeValue }}
+												/>
+											</TableCell>
 											<TableCell className={commonBorderClass}>Item {index + 1}</TableCell>
 											<TableCell className={commonBorderClass}>
 												<IconButton onClick={() => handleRowToggle(index)}>
