@@ -406,7 +406,7 @@ function AttributeMapping(props, ref) {
 
 			// Make an API call to update the invoice data
 			await axios.put(`https://localhost:44307/api/invoice/${invoiceData?.id}`, updatedInvoice);
-
+			toast.success('Attribute Mapped Successfully');
 			return true;
 		} catch (error) {
 			console.error('Failed to update the invoice:', error);

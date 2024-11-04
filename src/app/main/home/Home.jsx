@@ -15,6 +15,7 @@ import { motion } from 'framer-motion';
 import { DataGrid } from '@mui/x-data-grid';
 // import ReceiptIcon from '@mui/icons-material/Receipt';
 import { toast } from 'react-toastify';
+import '@react-pdf-viewer/core/lib/styles/index.css';
 import FileCopyIcon from '@mui/icons-material/FileCopy';
 import axios from 'axios';
 
@@ -61,6 +62,7 @@ function ShowStatus({ item }) {
 
 	return (
 		<Chip
+			size="small"
 			label={label}
 			color={color}
 			onClick={handleStatusClick}
@@ -96,7 +98,14 @@ function Home() {
 	const navigate = useNavigate();
 	const [loading, setLoading] = useState(false);
 	const [selectedFile, setSelectedFile] = useState(null);
-	const [pdfPreview, setPdfPreview] = useState('');
+	const [pdfPreview, setPdfPreview] = useState(null);
+
+	useEffect(() => {
+		if (!selectedFile) {
+			// eslint-disable-next-line no-console
+			console.log('File removed successfully');
+		}
+	}, [selectedFile]);
 
 	const columns = [
 		{ field: 'fileName', headerName: 'Invoice', flex: 1 },
@@ -173,12 +182,12 @@ function Home() {
 
 	const handleRemoveFile = () => {
 		setSelectedFile(null);
-		setPdfPreview('');
+		setPdfPreview(null);
 	};
 
 	const handleUploadFile = async () => {
 		if (!selectedFile) {
-			// setErrorMessage("Please select a file to upload.");
+			toast.error('Please select a file to upload.');
 			return;
 		}
 
@@ -241,43 +250,44 @@ function Home() {
 							>
 								<Paper className="relative flex flex-col flex-auto rounded-xl shadow overflow-hidden">
 									<div className="p-20 w-full flex flex-col items-center justify-center">
-										<Typography class="mb-16 text-md">Upload Your Invoice</Typography>
+										{!pdfPreview && (
+											<>
+												<Typography class="mb-16 text-md">Upload Your Invoice</Typography>
+												<div
+													{...getRootProps()}
+													className={`w-full px-40 py-60 h-32 border-2 border-dashed rounded-lg cursor-pointer flex items-center justify-center mb-4 ${
+														isDragActive ? 'border-blue-500' : 'border-gray-400'
+													}`}
+												>
+													<input {...getInputProps()} />
+													<div className="w-full flex flex-col justify-center items-center">
+														<CloudUploadIcon
+															fontSize="small"
+															className="w-full text-blue-500 my-12"
+														/>
+														{isDragActive ? (
+															<Typography className="text-blue-500">
+																Drop the PDF here...
+															</Typography>
+														) : (
+															<Typography className="text-gray-500">
+																Drag & drop a PDF here, or click to select
+															</Typography>
+														)}
+													</div>
+												</div>
+											</>
+										)}
 
-										<div
-											{...getRootProps()}
-											className={`w-full px-40 py-60 h-32 border-2 border-dashed rounded-lg cursor-pointer flex items-center justify-center mb-4 ${
-												isDragActive ? 'border-blue-500' : 'border-gray-400'
-											}`}
-										>
-											<input {...getInputProps()} />
-											<div className="w-full flex flex-col justify-center items-center">
-												<CloudUploadIcon
-													fontSize="small"
-													className="w-full text-blue-500 my-12"
-												/>
-												{isDragActive ? (
-													<Typography className="text-blue-500">
-														Drop the PDF here...
-													</Typography>
-												) : (
-													<Typography className="text-gray-500">
-														Drag & drop a PDF here, or click to select
-													</Typography>
-												)}
-											</div>
-										</div>
-
-										{/* Preview Section */}
 										{pdfPreview && (
 											<div className="flex flex-col items-center mt-2">
 												<Typography class="mb-4 text-md">PDF Preview</Typography>
 
-												{/* Display the PDF in an iframe for preview */}
 												<iframe
 													src={pdfPreview}
 													title="PDF Preview"
 													width="300"
-													height="400"
+													height="450"
 													className="border"
 												/>
 												<div>
@@ -291,7 +301,7 @@ function Home() {
 													</Button>
 													<Button
 														variant="outlined"
-														color="secondary"
+														color="primary"
 														onClick={handleUploadFile}
 														sx={{ m: 2 }}
 													>
@@ -300,7 +310,6 @@ function Home() {
 												</div>
 											</div>
 										)}
-
 										{!pdfPreview && (
 											<Typography className="mt-16 text-gray-500 font-mono">
 												No file selected
