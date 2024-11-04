@@ -12,6 +12,8 @@ import { useAppSelector } from 'app/store/hooks';
 import { useSelector } from 'react-redux';
 import { useMemo } from 'react';
 import axios from 'axios';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import { BASE_URL } from './auth/services/CONSTANTS';
 import AuthenticationProvider from './auth/AuthenticationProvider';
 import withAppProviders from './withAppProviders';
@@ -43,6 +45,19 @@ function App() {
 	const cacheProviderValue = useMemo(() => createCache(emotionCacheOptions[langDirection]), [langDirection]);
 	return (
 		<MockAdapterProvider>
+			<ToastContainer
+				position="top-right"
+				autoClose={5000}
+				hideProgressBar={false}
+				newestOnTop={false}
+				closeOnClick
+				rtl={false}
+				pauseOnFocusLoss
+				draggable
+				pauseOnHover
+				theme="light"
+				transition:Bounce
+			/>
 			<CacheProvider value={cacheProviderValue}>
 				<FuseTheme
 					theme={mainTheme}

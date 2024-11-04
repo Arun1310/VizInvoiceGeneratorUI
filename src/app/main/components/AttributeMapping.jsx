@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import '@react-pdf-viewer/core/lib/styles/index.css';
 import '@react-pdf-viewer/highlight/lib/styles/index.css';
 import { Worker, Viewer } from '@react-pdf-viewer/core';
@@ -19,6 +19,7 @@ import {
 	Checkbox,
 	Paper
 } from '@mui/material';
+import { toast } from 'react-toastify';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { motion } from 'framer-motion';
@@ -27,7 +28,7 @@ import { ExpandMore, ExpandLess, ListAlt } from '@mui/icons-material';
 import axios from 'axios';
 import { highlightPlugin, Trigger } from '@react-pdf-viewer/highlight';
 
-function PdfHighlightViewer({ pdfUrl, highlightFields }) {
+function PdfHighlightViewer({ pdfUrl, highlightFields, onTextSelect }) {
 	const [pdfFile, setPdfFile] = useState(null);
 	const renderHighlights = (props) => (
 		<div>
@@ -49,7 +50,14 @@ function PdfHighlightViewer({ pdfUrl, highlightFields }) {
 
 	const highlightPluginInstance = highlightPlugin({
 		renderHighlights,
-		trigger: Trigger.None
+		trigger: Trigger.TextSelection,
+		selectedText: (text) => {
+			console.log('Selected text:', text); // Add this line to check if it logs the selected text
+
+			if (text) {
+				onTextSelect(text); // Call the passed function to update the state in the parent
+			}
+		}
 	});
 
 	useEffect(() => {
@@ -90,13 +98,15 @@ function PdfHighlightViewer({ pdfUrl, highlightFields }) {
 	);
 }
 
-function AttributeMapping(props) {
+function AttributeMapping(props, ref) {
 	const { invoiceData } = props;
 	const [openDialog, setOpenDialog] = useState(false);
 	const [currentArray, setCurrentArray] = useState([]);
+	const [currentArrayIndex, setCurrentArrayIndex] = useState([]);
 	const [expandedRows, setExpandedRows] = useState([]);
 	const [editableData, setEditableData] = useState([]);
 	const [highlightFields, setHighlightFields] = useState([]);
+	const [selectedText, setSelectedText] = useState('');
 
 	const pdfUrl = invoiceData?.fileUrl;
 
@@ -141,35 +151,66 @@ function AttributeMapping(props) {
 		setEditableData(newData);
 	};
 
-	const handleItemChange = (e, index, field) => {
+	const handleInputBlur = (index) => {
+		const item = editableData[index];
+
+		if (item && !item.isAttributeMapped) {
+			item.isAttributeMapped = true;
+			const newData = [...editableData];
+			newData[index].isAttributeMapped = true;
+			setEditableData(newData);
+		}
+	};
+
+	const handleItemChange = (e, parentIndex, childIndex) => {
 		const { value } = e.target;
 
-		// Ensure you're updating the 'items' array within the editableData object
 		setEditableData((prevState) => {
-			// Make sure that 'items' exists in prevState
-			const updatedItems = [...(prevState.items || [])];
+			const updatedItems = [...(prevState || [])];
 
-			// Update the specific field of the item at the given index
-			updatedItems[index] = {
-				...updatedItems[index], // Spread the current item properties
-				[field]: value // Update the specific field with the new value
-			};
+			if (updatedItems[currentArrayIndex] && updatedItems[currentArrayIndex].children) {
+				const updatedChildren = [...updatedItems[currentArrayIndex].children];
 
-			return {
-				...prevState, // Spread the rest of the object (editableData)
-				items: updatedItems // Replace the items array with the updated one
-			};
+				if (updatedChildren[parentIndex] && updatedChildren[parentIndex].children) {
+					const subChildren = [...updatedChildren[parentIndex].children];
+
+					subChildren[childIndex] = {
+						...subChildren[childIndex],
+						attributeValue: value
+					};
+
+					updatedChildren[parentIndex] = {
+						...updatedChildren[parentIndex],
+						children: subChildren
+					};
+
+					updatedItems[currentArrayIndex] = {
+						...updatedItems[currentArrayIndex],
+						children: updatedChildren
+					};
+				}
+			}
+
+			return updatedItems;
 		});
 
+		// Update the `currentArray` state
 		setCurrentArray((prevArray) => {
-			// Clone the array to prevent mutating the state directly
 			const updatedArray = [...prevArray];
 
-			// Update the specific field of the object at the given index
-			updatedArray[index] = {
-				...updatedArray[index],
-				[field]: value
-			};
+			if (updatedArray[parentIndex] && updatedArray[parentIndex].children) {
+				const updatedChildren = [...updatedArray[parentIndex].children];
+
+				updatedChildren[childIndex] = {
+					...updatedChildren[childIndex],
+					attributeValue: value
+				};
+
+				updatedArray[parentIndex] = {
+					...updatedArray[parentIndex],
+					children: updatedChildren
+				};
+			}
 
 			return updatedArray;
 		});
@@ -181,6 +222,61 @@ function AttributeMapping(props) {
 		setEditableData(newData);
 	};
 
+	const handleRowNestedCheckboxChange = (index) => {
+		const newData = [...editableData];
+
+		newData[index].isAttributeMapped = !newData[index].isAttributeMapped;
+
+		// Helper function to recursively update the nested children
+		const toggleNestedChildren = (children, newValue) => {
+			if (children && children.length > 0) {
+				children.forEach((child) => {
+					child.isAttributeMapped = newValue;
+
+					if (child.children && child.children.length > 0) {
+						toggleNestedChildren(child.children, newValue);
+					}
+				});
+			}
+		};
+
+		// Apply the toggle to the children of the main item
+		toggleNestedChildren(newData[index].children, newData[index].isAttributeMapped);
+
+		setEditableData(newData);
+	};
+
+	const handleRowItemCheckboxChange = (parentIndex, childIndex) => {
+		setEditableData((prevState) => {
+			const updatedItems = [...(prevState || [])];
+
+			if (updatedItems[currentArrayIndex] && updatedItems[currentArrayIndex].children) {
+				const updatedChildren = [...updatedItems[currentArrayIndex].children];
+
+				if (updatedChildren[parentIndex] && updatedChildren[parentIndex].children) {
+					const subChildren = [...updatedChildren[parentIndex].children];
+
+					subChildren[childIndex] = {
+						...subChildren[childIndex],
+						isAttributeMapped: !subChildren[childIndex].isAttributeMapped
+					};
+
+					updatedChildren[parentIndex] = {
+						...updatedChildren[parentIndex],
+						children: subChildren
+					};
+
+					updatedItems[currentArrayIndex] = {
+						...updatedItems[currentArrayIndex],
+						children: updatedChildren
+					};
+				}
+			}
+
+			return updatedItems;
+		});
+	};
+
 	useEffect(() => {
 		if (editableData && editableData.length > 0) {
 			const parsedHighlights = extractPositions(editableData);
@@ -188,14 +284,78 @@ function AttributeMapping(props) {
 		}
 	}, [editableData]);
 
-	// Handle header checkbox change
 	const handleSelectAll = (event) => {
 		const isChecked = event.target.checked;
-		const newData = editableData.map((item) => ({
-			...item,
-			isAttributeMapped: isChecked
-		}));
+
+		const updateAttributes = (attributes) => {
+			return attributes.map((item) => {
+				const updatedItem = {
+					...item,
+					isAttributeMapped: isChecked
+				};
+
+				// Check if the item has children and update them recursively
+				if (item.children && item.children.length > 0) {
+					updatedItem.children = updateAttributes(item.children);
+				}
+
+				return updatedItem;
+			});
+		};
+
+		const newData = updateAttributes(editableData);
 		setEditableData(newData);
+	};
+
+	const handleTextSelect = (selectedText) => {
+		setSelectedText(selectedText);
+		console.log(selectedText);
+	};
+
+	useImperativeHandle(ref, () => ({
+		handleOnSubmit
+	}));
+
+	const handleOnSubmit = async () => {
+		const validateAttributes = (dataArray) => {
+			return dataArray.some((item) => {
+				// Only consider items where `attributeName` has a value
+				if (item.attributeName !== null) {
+					// Check if `isAttributeMapped` is false
+					if (!item.isAttributeMapped) {
+						toast.error('Verify all the attributes');
+						return true; // Return true to indicate validation failed
+					}
+				}
+
+				// Recursively check nested children if they exist
+				if (item.children && item.children.length > 0) {
+					return validateAttributes(item.children);
+				}
+
+				return false; // Continue if no issues found in this item
+			});
+		};
+
+		// If validation fails, stop execution
+		if (validateAttributes(editableData)) {
+			return false;
+		}
+
+		try {
+			const updatedInvoice = invoiceData;
+			updatedInvoice.state = 2;
+			updatedInvoice.attributes = editableData;
+
+			// Make an API call to update the invoice data
+			await axios.put(`https://localhost:44307/api/invoice/${invoiceData?.id}`, updatedInvoice);
+
+			return true;
+		} catch (error) {
+			console.error('Failed to update the invoice:', error);
+			// Return false to indicate failure
+			return false;
+		}
 	};
 
 	const renderEditableTable = (data) => {
@@ -204,7 +364,6 @@ function AttributeMapping(props) {
 			backgroundColor: '#00A4EF',
 			color: 'white'
 		};
-		// const allowedFields = ['vendorName', 'customerName', 'subTotal', 'totalTax', 'invoiceTotal'];
 		const allowedFields = [
 			'VendorName',
 			'VendorTaxId',
@@ -224,8 +383,9 @@ function AttributeMapping(props) {
 		];
 		const allowedItemFields = ['Description', 'ProductCode', 'Quantity', 'Unit', 'UnitPrice', 'Amount'];
 
-		const handleOpenDialog = (arrayData) => {
+		const handleOpenDialog = (arrayData, index) => {
 			setCurrentArray(arrayData);
+			setCurrentArrayIndex(index);
 			setOpenDialog(true);
 		};
 
@@ -235,19 +395,6 @@ function AttributeMapping(props) {
 
 		const handleRowToggle = (index) => {
 			setExpandedRows((prev) => (prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]));
-		};
-
-		const handleOnSubmit = async () => {
-			try {
-				const updatedInvoice = invoiceData;
-				updatedInvoice.state = 2;
-				updatedInvoice.invoiceResult = editableData;
-				// Make an API call to update the invoice data
-				await axios.put(`https://localhost:44307/api/invoice/${invoiceData?.id}`, updatedInvoice);
-				// alert('Invoice successfully updated.');
-			} catch (error) {
-				// alert('Failed to update the invoice.');
-			}
 		};
 
 		return (
@@ -274,11 +421,6 @@ function AttributeMapping(props) {
 										onChange={handleSelectAll}
 										inputProps={{ 'aria-label': 'select all' }}
 									/>
-									{/* <Checkbox
-										color="success"
-										onChange={handleSelectAll}
-										inputProps={{ 'aria-label': 'select all' }}
-									/> */}
 								</TableCell>
 								<TableCell
 									className={commonBorderClass}
@@ -324,6 +466,7 @@ function AttributeMapping(props) {
 														variant="outlined"
 														value={attributeValue ?? ''} // Use attributeValue directly
 														onChange={(e) => handleInputChange(e, index)}
+														onBlur={() => handleInputBlur(index)}
 													/>
 												</TableCell>
 											</TableRow>
@@ -337,10 +480,11 @@ function AttributeMapping(props) {
 												{' '}
 												<TableCell className={commonBorderClass}>
 													<Checkbox
+														checked={item.isAttributeMapped}
 														color="success"
 														icon={<CheckCircleOutlineIcon />}
 														checkedIcon={<CheckCircleIcon />}
-														onChange={(e) => handleRowCheckboxChange(e, attributeName)}
+														onChange={() => handleRowNestedCheckboxChange(index)}
 														inputProps={{ 'aria-label': attributeValue }}
 													/>
 												</TableCell>
@@ -350,7 +494,7 @@ function AttributeMapping(props) {
 													<IconButton
 														sx={{ '& .MuiSvgIcon-root': { fontSize: 30 } }}
 														color="secondary"
-														onClick={() => handleOpenDialog(item.children)}
+														onClick={() => handleOpenDialog(item.children, index)}
 													>
 														<ListAlt />
 													</IconButton>
@@ -364,15 +508,6 @@ function AttributeMapping(props) {
 						</TableBody>
 					</Table>
 				</TableContainer>
-
-				{/* <Button
-					variant="text"
-					endIcon={<SaveIcon />}
-					onClick={handleOnSubmit}
-					sx={{ width: { xs: '100%', sm: 'fit-content', marginTop: 8 } }}
-				>
-					Submit
-				</Button> */}
 
 				<Dialog
 					BackdropProps={{
@@ -394,15 +529,6 @@ function AttributeMapping(props) {
 							<TableHead>
 								<TableRow>
 									{' '}
-									<TableCell className={commonBorderClass}>
-										{/* <Checkbox
-											color="success"
-											icon={<CheckCircleOutlineIcon />}
-											checkedIcon={<CheckCircleIcon />}
-											onChange={(e) => handleRowCheckboxChange(e, attributeName)}
-											inputProps={{ 'aria-label': attributeValue }}
-										/> */}
-									</TableCell>
 									<TableCell
 										className={commonBorderClass}
 										sx={tableHeaderStyle}
@@ -422,15 +548,6 @@ function AttributeMapping(props) {
 									<React.Fragment key={index}>
 										<TableRow>
 											{' '}
-											<TableCell className={commonBorderClass}>
-												<Checkbox
-													color="success"
-													icon={<CheckCircleOutlineIcon />}
-													checkedIcon={<CheckCircleIcon />}
-													// onChange={(e) => handleRowCheckboxChange(e, attributeName)}
-													// inputProps={{ 'aria-label': attributeValue }}
-												/>
-											</TableCell>
 											<TableCell className={commonBorderClass}>Item {index + 1}</TableCell>
 											<TableCell className={commonBorderClass}>
 												<IconButton onClick={() => handleRowToggle(index)}>
@@ -453,25 +570,69 @@ function AttributeMapping(props) {
 														{/* Collapsible content with editable fields for each item */}
 														<Table size="small">
 															<TableBody>
-																{allowedItemFields.map((field) => (
-																	<TableRow key={field}>
-																		<TableCell className={commonBorderClass}>
-																			{field}
-																		</TableCell>
-																		<TableCell className={commonBorderClass}>
-																			<TextField
-																				fullWidth
-																				variant="outlined"
-																				value={item[field] ?? ''}
-																				// multiline={field === 'description'}  // Make description multiline
-																				// rows={field === 'description' ? 4 : 1}  // More space for description
-																				onChange={(e) =>
-																					handleItemChange(e, index, field)
-																				}
-																			/>
-																		</TableCell>
-																	</TableRow>
-																))}
+																{item.children &&
+																	item.children.map((child, childIndex) => {
+																		const { attributeName, attributeValue } = child;
+
+																		// Check if attributeName is in allowedFields
+																		if (
+																			allowedItemFields?.includes(attributeName)
+																		) {
+																			return (
+																				<TableRow key={childIndex}>
+																					<TableCell
+																						className={commonBorderClass}
+																					>
+																						<Checkbox
+																							checked={
+																								item.isAttributeMapped
+																							}
+																							color="success"
+																							icon={
+																								<CheckCircleOutlineIcon />
+																							}
+																							checkedIcon={
+																								<CheckCircleIcon />
+																							}
+																							onChange={() =>
+																								handleRowItemCheckboxChange(
+																									index,
+																									childIndex
+																								)
+																							}
+																							inputProps={{
+																								'aria-label':
+																									attributeValue
+																							}}
+																						/>
+																					</TableCell>
+																					<TableCell
+																						className={commonBorderClass}
+																					>
+																						{attributeName}
+																					</TableCell>
+																					<TableCell
+																						className={commonBorderClass}
+																					>
+																						<TextField
+																							fullWidth
+																							variant="outlined"
+																							value={attributeValue ?? ''}
+																							onChange={(e) =>
+																								handleItemChange(
+																									e,
+																									index,
+																									childIndex
+																								)
+																							}
+																						/>
+																					</TableCell>
+																				</TableRow>
+																			);
+																		}
+
+																		return null; // Skip if attributeName is not in allowedFields
+																	})}
 															</TableBody>
 														</Table>
 													</Box>
@@ -522,6 +683,7 @@ function AttributeMapping(props) {
 						<PdfHighlightViewer
 							pdfUrl={pdfUrl}
 							highlightFields={highlightFields}
+							onTextSelect={handleTextSelect}
 						/>
 					</Paper>
 				</motion.div>
@@ -534,4 +696,4 @@ function AttributeMapping(props) {
 	);
 }
 
-export default AttributeMapping;
+export default forwardRef(AttributeMapping);

@@ -34,7 +34,12 @@ const steps = ['Attribute Mapping', 'Custom Invoice'];
 function getStepContent(step, invoiceData, ref) {
 	switch (step) {
 		case 0:
-			return <AttributeMapping invoiceData={invoiceData} />;
+			return (
+				<AttributeMapping
+					invoiceData={invoiceData}
+					ref={ref}
+				/>
+			);
 		case 1:
 			return (
 				<CustomInvoiceGenerator
@@ -58,6 +63,9 @@ function InvoiceDetail() {
 		try {
 			// setLoading(true);
 			const response = await axios.get(`https://localhost:44307/api/Invoice/${id}`);
+
+			if (response.data.state === 2) setActiveStep(1);
+
 			setInvoiceData(response.data);
 			// setLoading(false);
 		} catch (err) {
@@ -71,9 +79,16 @@ function InvoiceDetail() {
 		fetchInvoiceById();
 	}, [fetchInvoiceById]);
 
-	const handleNext = () => {
-		setActiveStep(activeStep + 1);
+	const handleNext = async () => {
+		if (ref.current) {
+			const success = await ref.current.handleOnSubmit();
+
+			if (success) {
+				setActiveStep(activeStep + 1);
+			}
+		}
 	};
+
 	const handleBack = () => {
 		setActiveStep(activeStep - 1);
 	};
