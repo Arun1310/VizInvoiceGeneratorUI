@@ -14,6 +14,7 @@ import Paper from '@mui/material/Paper';
 import { motion } from 'framer-motion';
 import { DataGrid } from '@mui/x-data-grid';
 // import ReceiptIcon from '@mui/icons-material/Receipt';
+import { toast } from 'react-toastify';
 import FileCopyIcon from '@mui/icons-material/FileCopy';
 import axios from 'axios';
 
@@ -190,6 +191,7 @@ function Home() {
 				'Content-Type': 'multipart/form-data'
 			}
 		});
+		toast.success('File Uploaded Successfully');
 		setLoading(false);
 		handleRemoveFile();
 		fetchInvoices();

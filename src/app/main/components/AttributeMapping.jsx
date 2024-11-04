@@ -28,7 +28,7 @@ import { ExpandMore, ExpandLess, ListAlt } from '@mui/icons-material';
 import axios from 'axios';
 import { highlightPlugin, Trigger } from '@react-pdf-viewer/highlight';
 
-function PdfHighlightViewer({ pdfUrl, highlightFields, onTextSelect }) {
+function PdfHighlightViewer({ pdfUrl, highlightFields }) {
 	const [pdfFile, setPdfFile] = useState(null);
 	const renderHighlights = (props) => (
 		<div>
@@ -50,14 +50,7 @@ function PdfHighlightViewer({ pdfUrl, highlightFields, onTextSelect }) {
 
 	const highlightPluginInstance = highlightPlugin({
 		renderHighlights,
-		trigger: Trigger.TextSelection,
-		selectedText: (text) => {
-			console.log('Selected text:', text); // Add this line to check if it logs the selected text
-
-			if (text) {
-				onTextSelect(text); // Call the passed function to update the state in the parent
-			}
-		}
+		trigger: Trigger.None
 	});
 
 	useEffect(() => {
@@ -106,7 +99,6 @@ function AttributeMapping(props, ref) {
 	const [expandedRows, setExpandedRows] = useState([]);
 	const [editableData, setEditableData] = useState([]);
 	const [highlightFields, setHighlightFields] = useState([]);
-	const [selectedText, setSelectedText] = useState('');
 
 	const pdfUrl = invoiceData?.fileUrl;
 
@@ -160,6 +152,57 @@ function AttributeMapping(props, ref) {
 			newData[index].isAttributeMapped = true;
 			setEditableData(newData);
 		}
+	};
+
+	const handleItemInputBlur = (e, parentIndex, childIndex) => {
+		setEditableData((prevState) => {
+			const updatedItems = [...(prevState || [])];
+
+			if (updatedItems[currentArrayIndex] && updatedItems[currentArrayIndex].children) {
+				const updatedChildren = [...updatedItems[currentArrayIndex].children];
+
+				if (updatedChildren[parentIndex] && updatedChildren[parentIndex].children) {
+					const subChildren = [...updatedChildren[parentIndex].children];
+
+					subChildren[childIndex] = {
+						...subChildren[childIndex],
+						isAttributeMapped: !subChildren[childIndex].isAttributeMapped
+					};
+
+					updatedChildren[parentIndex] = {
+						...updatedChildren[parentIndex],
+						children: subChildren
+					};
+
+					updatedItems[currentArrayIndex] = {
+						...updatedItems[currentArrayIndex],
+						children: updatedChildren
+					};
+				}
+			}
+
+			return updatedItems;
+		});
+
+		setCurrentArray((prevArray) => {
+			const updatedArray = [...prevArray];
+
+			if (updatedArray[parentIndex] && updatedArray[parentIndex].children) {
+				const updatedChildren = [...updatedArray[parentIndex].children];
+
+				updatedChildren[childIndex] = {
+					...updatedChildren[childIndex],
+					isAttributeMapped: !updatedChildren[childIndex].isAttributeMapped
+				};
+
+				updatedArray[parentIndex] = {
+					...updatedArray[parentIndex],
+					children: updatedChildren
+				};
+			}
+
+			return updatedArray;
+		});
 	};
 
 	const handleItemChange = (e, parentIndex, childIndex) => {
@@ -275,6 +318,25 @@ function AttributeMapping(props, ref) {
 
 			return updatedItems;
 		});
+		setCurrentArray((prevArray) => {
+			const updatedArray = [...prevArray];
+
+			if (updatedArray[parentIndex] && updatedArray[parentIndex].children) {
+				const updatedChildren = [...updatedArray[parentIndex].children];
+
+				updatedChildren[childIndex] = {
+					...updatedChildren[childIndex],
+					isAttributeMapped: !updatedChildren[childIndex].isAttributeMapped
+				};
+
+				updatedArray[parentIndex] = {
+					...updatedArray[parentIndex],
+					children: updatedChildren
+				};
+			}
+
+			return updatedArray;
+		});
 	};
 
 	useEffect(() => {
@@ -307,11 +369,6 @@ function AttributeMapping(props, ref) {
 		setEditableData(newData);
 	};
 
-	const handleTextSelect = (selectedText) => {
-		setSelectedText(selectedText);
-		console.log(selectedText);
-	};
-
 	useImperativeHandle(ref, () => ({
 		handleOnSubmit
 	}));
@@ -323,7 +380,7 @@ function AttributeMapping(props, ref) {
 				if (item.attributeName !== null) {
 					// Check if `isAttributeMapped` is false
 					if (!item.isAttributeMapped) {
-						toast.error('Verify all the attributes');
+						toast.error('Verify all the attributes to continue');
 						return true; // Return true to indicate validation failed
 					}
 				}
@@ -585,7 +642,7 @@ function AttributeMapping(props, ref) {
 																					>
 																						<Checkbox
 																							checked={
-																								item.isAttributeMapped
+																								child.isAttributeMapped
 																							}
 																							color="success"
 																							icon={
@@ -620,6 +677,13 @@ function AttributeMapping(props, ref) {
 																							value={attributeValue ?? ''}
 																							onChange={(e) =>
 																								handleItemChange(
+																									e,
+																									index,
+																									childIndex
+																								)
+																							}
+																							onBlur={(e) =>
+																								handleItemInputBlur(
 																									e,
 																									index,
 																									childIndex
@@ -683,7 +747,6 @@ function AttributeMapping(props, ref) {
 						<PdfHighlightViewer
 							pdfUrl={pdfUrl}
 							highlightFields={highlightFields}
-							onTextSelect={handleTextSelect}
 						/>
 					</Paper>
 				</motion.div>

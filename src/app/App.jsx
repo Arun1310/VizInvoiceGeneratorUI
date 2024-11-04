@@ -27,11 +27,13 @@ const emotionCacheOptions = {
 	rtl: {
 		key: 'muirtl',
 		stylisPlugins: [rtlPlugin],
+		// eslint-disable-next-line no-undef
 		insertionPoint: document.getElementById('emotion-insertion-point')
 	},
 	ltr: {
 		key: 'muiltr',
 		stylisPlugins: [],
+		// eslint-disable-next-line no-undef
 		insertionPoint: document.getElementById('emotion-insertion-point')
 	}
 };
