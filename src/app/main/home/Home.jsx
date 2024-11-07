@@ -52,6 +52,14 @@ function ShowStatus({ item }) {
 			color = 'info';
 			break;
 		case 3:
+			label = 'Discarded';
+			color = 'error';
+			break;
+		case 4:
+			label = 'Validated';
+			color = 'secondary';
+			break;
+		case 5:
 			label = 'Completed';
 			color = 'success';
 			break;
@@ -84,7 +92,7 @@ function DownLoadInvoiceFile({ item }) {
 					event.stopPropagation();
 					handleDownloadClick();
 				}}
-				disabled={state !== 3}
+				disabled={state !== 5}
 			>
 				<FileCopyIcon />
 			</IconButton>
@@ -207,7 +215,7 @@ function Home() {
 	};
 
 	const handleRowClick = (params) => {
-		if (params.row.state === 3) return;
+		if (params.row.state === 5) return;
 
 		const { id } = params.row;
 		navigate(`/invoice/${id}`);

@@ -15,6 +15,7 @@ import Stepper from '@mui/material/Stepper';
 import ChevronLeftRoundedIcon from '@mui/icons-material/ChevronLeftRounded';
 import ChevronRightRoundedIcon from '@mui/icons-material/ChevronRightRounded';
 import AttributeMapping from '../components/AttributeMapping';
+import Validator from '../components/Validator';
 import CustomInvoiceGenerator from '../components/CustomInvoiceGenerator';
 
 const Root = styled(FusePageSimple)(({ theme }) => ({
@@ -29,9 +30,9 @@ const Root = styled(FusePageSimple)(({ theme }) => ({
 	'& .FusePageSimple-sidebarContent': {}
 }));
 
-const steps = ['Attribute Mapping', 'Custom Invoice'];
+const steps = ['Attribute Mapping', 'Validator', 'Custom Invoice'];
 
-function getStepContent(step, invoiceData, ref) {
+function getStepContent(step, invoiceData, ref, handleValidationStatusChange) {
 	switch (step) {
 		case 0:
 			return (
@@ -41,6 +42,14 @@ function getStepContent(step, invoiceData, ref) {
 				/>
 			);
 		case 1:
+			return (
+				<Validator
+					invoiceData={invoiceData}
+					ref={ref}
+					onValidationStatusChange={handleValidationStatusChange}
+				/>
+			);
+		case 2:
 			return (
 				<CustomInvoiceGenerator
 					invoiceData={invoiceData}
@@ -58,13 +67,19 @@ function InvoiceDetail() {
 	const [activeStep, setActiveStep] = useState(0);
 	const { id } = useParams();
 	const navigate = useNavigate();
+	const [hasValidationErrors, setHasValidationErrors] = useState(false);
+
+	const handleValidationStatusChange = (hasErrors) => {
+		setHasValidationErrors(hasErrors);
+	};
 
 	const fetchInvoiceById = useCallback(async () => {
 		try {
 			// setLoading(true);
 			const response = await axios.get(`https://localhost:44307/api/Invoice/${id}`);
 
-			if (response.data.state === 2) setActiveStep(1);
+			if (response.data.state === 2 || response.data.state === 3) setActiveStep(1);
+			else if (response.data.state === 4) setActiveStep(2);
 
 			setInvoiceData(response.data);
 			// setLoading(false);
@@ -79,8 +94,31 @@ function InvoiceDetail() {
 		fetchInvoiceById();
 	}, [fetchInvoiceById]);
 
+	// const handleNext = async () => {
+	// 	if (activeStep === 1) {
+	// 		setActiveStep(activeStep + 1);
+	// 		return;
+	// 	}
+
+	// 	if (ref.current) {
+	// 		const success = await ref.current.handleOnSubmit();
+
+	// 		if (success) {
+	// 			setActiveStep(activeStep + 1);
+	// 		}
+	// 	}
+	// };
+
 	const handleNext = async () => {
-		if (ref.current) {
+		if (hasValidationErrors) {
+			// If there are validation errors, show the Discard button logic here
+			const success = await ref.current.handleOnDiscard();
+
+			if (success) {
+				onClickHome();
+			}
+		} else {
+			// Existing logic to move to the next step
 			const success = await ref.current.handleOnSubmit();
 
 			if (success) {
@@ -90,11 +128,13 @@ function InvoiceDetail() {
 	};
 
 	const handleBack = () => {
+		if (activeStep === 1) setHasValidationErrors(false);
+
 		setActiveStep(activeStep - 1);
 	};
-	const handleGoBack = () => {
-		navigate('/');
-	};
+	// const handleGoBack = () => {
+	// 	navigate('/');
+	// };
 
 	const onClickGenerate = () => {
 		ref.current.generateCustomInvoice();
@@ -104,25 +144,8 @@ function InvoiceDetail() {
 		navigate('/');
 	};
 
-	const container = {
-		show: {
-			transition: {
-				staggerChildren: 0.04
-			}
-		}
-	};
-	const item = {
-		hidden: { opacity: 0, y: 20 },
-		show: { opacity: 1, y: 0 }
-	};
-
 	return (
 		<Root
-			// header={
-			// 	<div className="p-24">
-			// 		<h4>{t('TITLE')}</h4>
-			// 	</div>
-			// }
 			content={
 				<div className="px-24 pt-12 w-full">
 					<div className="px-60">
@@ -176,7 +199,7 @@ function InvoiceDetail() {
 							</Stack>
 						) : (
 							<>
-								{getStepContent(activeStep, invoiceData, ref)}
+								{getStepContent(activeStep, invoiceData, ref, handleValidationStatusChange)}
 								<Box
 									sx={[
 										{
@@ -205,6 +228,29 @@ function InvoiceDetail() {
 											Previous
 										</Button>
 									)}
+									{invoiceData.state !== 3 && hasValidationErrors ? (
+										<Button
+											variant="contained"
+											color="error"
+											onClick={handleNext}
+											size="small"
+										>
+											Discard
+										</Button>
+									) : (
+										activeStep !== steps.length - 1 &&
+										invoiceData.state !== 3 && (
+											<Button
+												variant="contained"
+												color="secondary"
+												endIcon={<ChevronRightRoundedIcon />}
+												onClick={handleNext}
+												size="small"
+											>
+												Next
+											</Button>
+										)
+									)}
 									{activeStep === steps.length - 1 && (
 										<Button
 											variant="contained"
@@ -214,17 +260,6 @@ function InvoiceDetail() {
 											size="small"
 										>
 											Generate
-										</Button>
-									)}
-									{activeStep !== steps.length - 1 && (
-										<Button
-											variant="contained"
-											color="secondary"
-											endIcon={<ChevronRightRoundedIcon />}
-											onClick={handleNext}
-											size="small"
-										>
-											Next
 										</Button>
 									)}
 								</Box>
